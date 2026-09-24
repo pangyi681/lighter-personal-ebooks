@@ -22,7 +22,10 @@
     background:radial-gradient(120% 100% at 50% 0%, #0F2323 0%, #081414 60%, #060F0F 100%);
     color:var(--fg); font-family:var(--sans); min-height:100vh;
     display:flex; flex-direction:column; align-items:center;
+    opacity:0; transition:opacity .5s ease;
   }
+  body.is-ready{ opacity:1; }
+  body.is-leaving{ opacity:0; }
   header{
     width:100%; max-width:1100px; padding:56px 24px 24px;
     text-align:center; position:relative;
@@ -92,7 +95,7 @@
   <header>
     <div class="mono">LT</div>
     <div class="kicker">Shuttered Light</div>
-    <h1>作品集電子書</h1>
+    <h1>Digital Editions</h1>
     <div class="rule"></div>
     <p class="lede">點開封面，像翻一本真的書一樣，一頁一頁走過這些影像。</p>
   </header>
@@ -122,5 +125,19 @@
   </main>
 
   <footer>© Lighter · Shuttered Light</footer>
+
+<script>
+  requestAnimationFrame(() => document.body.classList.add("is-ready"));
+
+  document.querySelectorAll(".book-card").forEach((card) => {
+    card.addEventListener("click", (e) => {
+      e.preventDefault();
+      const href = card.getAttribute("href");
+      document.body.classList.remove("is-ready");
+      document.body.classList.add("is-leaving");
+      setTimeout(() => { location.href = href; }, 380);
+    });
+  });
+</script>
 </body>
 </html>
