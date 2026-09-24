@@ -6,7 +6,6 @@
 <title>作品集電子書</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
 <style>
   :root{
     --ink:#0E1F1F; --teal:#1B4B4B; --teal-bright:#2E9A9A;
@@ -19,7 +18,7 @@
   html,body{margin:0;padding:0;height:100%;overflow:hidden}
   body{
     font-family:var(--sans); color:var(--ink);
-    background:radial-gradient(120% 100% at 50% 0%, #F7F4EE 0%, #EDE8DE 100%);
+    background:#FFFFFF;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     opacity:0; transition:opacity .5s ease;
   }
@@ -49,26 +48,28 @@
     justify-self:end; white-space:nowrap;
   }
 
-  #book-stage{
+  #viewer{
     display:flex; align-items:center; justify-content:center;
-    width:100vw; height:100vh;
+    width:100vw; height:100vh; padding:90px 100px;
   }
-  #book{ margin:auto; }
-  #book img{
-    width:100%; height:100%; object-fit:contain; display:block;
-    background:#FBFAF6;
+  #page-img{
+    max-width:100%; max-height:100%; width:auto; height:auto;
+    display:block; background:#FBFAF6;
+    opacity:0; transition:opacity .45s ease;
   }
-  .stf__item, .stf__wrapper{ background:transparent !important; }
+  #page-img.is-visible{ opacity:1; }
 
   .nav-btn{
     position:fixed; top:50%; transform:translateY(-50%);
     width:48px; height:48px; border-radius:50%; border:1px solid var(--line-strong);
-    background:rgba(255,255,255,.5); backdrop-filter:blur(4px); color:var(--ink);
+    background:rgba(14,31,31,.05); color:var(--ink);
+    box-shadow:0 2px 14px rgba(14,31,31,.08);
     display:flex; align-items:center; justify-content:center; cursor:pointer;
-    z-index:15; transition:background .2s, opacity .2s; opacity:.7;
+    z-index:15; transition:background .2s, opacity .2s; opacity:.6;
     font-family:var(--serif-en); font-size:20px; user-select:none;
   }
-  .nav-btn:hover{ opacity:1; }
+  .nav-btn:hover{ background:rgba(14,31,31,.1); opacity:1; }
+  .nav-btn.is-disabled{ opacity:.2; pointer-events:none; }
   #prev-btn{ left:20px; } #next-btn{ right:20px; }
 
   .loading{
@@ -82,6 +83,7 @@
     .topbar{ padding:14px 12px; gap:8px; }
     .back-link span.back-text{ display:none; }
     .book-title{ font-size:13px; }
+    #viewer{ padding:70px 16px; }
     .nav-btn{ width:38px; height:38px; font-size:16px; }
     #prev-btn{ left:8px; } #next-btn{ right:8px; }
   }
@@ -96,34 +98,24 @@
     <div class="page-indicator" id="page-indicator"></div>
   </div>
 
-  <div id="book-stage">
-    <div id="book"></div>
+  <div id="viewer">
+    <img id="page-img" alt="">
   </div>
 
   <div class="nav-btn" id="prev-btn">&#8249;</div>
   <div class="nav-btn" id="next-btn">&#8250;</div>
 
 <script>
-  // Each book's `ratio` is the shape of its INTERIOR pages (most pages
-  // share this shape). Shuttered Light's PDF was authored with page 1 and
-  // the last page as single portrait covers, and every page in between
-  // pre-composed as a full two-page landscape spread — so this viewer
-  // always shows one image per flip, sized to the interior-page ratio,
-  // and lets narrower cover images letterbox (object-fit:contain) rather
-  // than being stretched or split across a fake spread.
+  // Shuttered Light's PDF has page 1 and the last page as single portrait
+  // covers, and every page in between pre-composed as a full two-page
+  // landscape spread. Rather than forcing everything into one fixed page
+  // size (which either squashes the spreads or stretches the covers),
+  // each image is shown at its own natural shape — the <img> just fits
+  // within the available space, so covers read as a single page and
+  // spreads read full-width automatically.
   const BOOKS = {
-    "xiaode-photobook": {
-      title: "Shuttered Light",
-      dir: "images/xiaode-photobook",
-      pages: 58,
-      ratio: 1190.6 / 807.9
-    },
-    "fragments-of-light": {
-      title: "Fragments of Light",
-      dir: "images/fragments-of-light",
-      pages: 32,
-      ratio: 1489 / 1049
-    }
+    "xiaode-photobook": { title: "Shuttered Light", dir: "images/xiaode-photobook", pages: 58 },
+    "fragments-of-light": { title: "Fragments of Light", dir: "images/fragments-of-light", pages: 32 }
   };
 
   const params = new URLSearchParams(location.search);
@@ -147,68 +139,63 @@
   } else {
     document.getElementById("book-title").textContent = cfg.title;
 
-    const images = [];
-    for (let i = 1; i <= cfg.pages; i++) {
-      images.push(`${cfg.dir}/page-${String(i).padStart(2,"0")}.jpg`);
-    }
-
-    function computeSize() {
-      const vw = window.innerWidth, vh = window.innerHeight;
-      const availW = vw * (window.innerWidth < 640 ? 0.94 : 0.82);
-      const availH = vh * 0.82;
-      const pageH = Math.min(availH, availW / cfg.ratio);
-      const pageW = pageH * cfg.ratio;
-      return { width: Math.round(pageW), height: Math.round(pageH) };
-    }
-
-    const { width, height } = computeSize();
-
-    const pageFlip = new St.PageFlip(document.getElementById("book"), {
-      width, height,
-      size: "fixed",
-      minWidth: 200, maxWidth: 1600,
-      minHeight: 200, maxHeight: 1200,
-      showCover: false,
-      usePortrait: true,
-      maxShadowOpacity: 0.12,
-      mobileScrollSupport: false,
-      flippingTime: 700,
-      useMouseEvents: true
-    });
-
-    pageFlip.loadFromImages(images);
-
     const total = cfg.pages;
-    function updateIndicator() {
-      const cur = pageFlip.getCurrentPageIndex() + 1;
-      document.getElementById("page-indicator").textContent = `${cur} / ${total}`;
-    }
-    pageFlip.on("flip", updateIndicator);
-    pageFlip.on("init", () => {
-      updateIndicator();
-      document.getElementById("loading").classList.add("hidden");
-      requestAnimationFrame(() => document.body.classList.add("is-ready"));
-    });
+    let currentIndex = 0;
+    const img = document.getElementById("page-img");
+    const prevBtn = document.getElementById("prev-btn");
+    const nextBtn = document.getElementById("next-btn");
 
-    document.getElementById("prev-btn").addEventListener("click", () => pageFlip.flipPrev());
-    document.getElementById("next-btn").addEventListener("click", () => pageFlip.flipNext());
+    function pageSrc(i) {
+      return `${cfg.dir}/page-${String(i + 1).padStart(2, "0")}.jpg`;
+    }
+    function preload(i) {
+      if (i < 0 || i >= total) return;
+      const im = new Image();
+      im.src = pageSrc(i);
+    }
+    function updateChrome() {
+      document.getElementById("page-indicator").textContent = `${currentIndex + 1} / ${total}`;
+      prevBtn.classList.toggle("is-disabled", currentIndex === 0);
+      nextBtn.classList.toggle("is-disabled", currentIndex === total - 1);
+    }
+
+    function showPage(newIndex, immediate) {
+      newIndex = Math.max(0, Math.min(total - 1, newIndex));
+      if (!immediate && newIndex === currentIndex) return;
+      currentIndex = newIndex;
+      updateChrome();
+      preload(currentIndex + 1);
+      preload(currentIndex - 1);
+
+      const apply = () => {
+        img.onload = () => {
+          img.classList.add("is-visible");
+          document.getElementById("loading").classList.add("hidden");
+          requestAnimationFrame(() => document.body.classList.add("is-ready"));
+        };
+        img.src = pageSrc(currentIndex);
+      };
+
+      if (immediate) {
+        apply();
+      } else {
+        img.classList.remove("is-visible");
+        setTimeout(apply, 220);
+      }
+    }
+
+    showPage(0, true);
+
+    prevBtn.addEventListener("click", () => showPage(currentIndex - 1));
+    nextBtn.addEventListener("click", () => showPage(currentIndex + 1));
 
     window.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft") pageFlip.flipPrev();
-      if (e.key === "ArrowRight") pageFlip.flipNext();
+      if (e.key === "ArrowLeft") showPage(currentIndex - 1);
+      if (e.key === "ArrowRight") showPage(currentIndex + 1);
       if (e.key === "Escape") goTo("index.html");
     });
 
-    let resizeTimer;
-    window.addEventListener("resize", () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        const { width, height } = computeSize();
-        pageFlip.update({ width, height });
-      }, 200);
-    });
-
-    // fallback: fade in anyway after 4s even if init is slow
+    // fallback: reveal the page anyway after 4s even if the image is slow
     setTimeout(() => {
       document.getElementById("loading").classList.add("hidden");
       document.body.classList.add("is-ready");
