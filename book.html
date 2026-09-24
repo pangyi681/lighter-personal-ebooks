@@ -53,15 +53,15 @@
     white-space:nowrap;
   }
   .thumb-toggle{
-    appearance:none; border:1px solid var(--teal); background:rgba(27,75,75,.08);
+    appearance:none; border:1px solid var(--teal); background:transparent;
     color:var(--ink); height:32px; padding:0 13px 0 10px; border-radius:16px; cursor:pointer;
     font-family:var(--sans); font-size:11px; letter-spacing:.08em;
     display:flex; align-items:center; gap:7px; white-space:nowrap;
-    transition:background .2s, border-color .2s, color .2s;
+    transition:border-color .2s, color .2s;
   }
   .thumb-toggle .icon{ font-size:13px; line-height:1; }
-  .thumb-toggle:hover{ background:rgba(27,75,75,.16); border-color:var(--teal-bright); }
-  .thumb-toggle.is-active{ background:var(--teal); border-color:var(--teal); color:#fff; }
+  .thumb-toggle:hover{ border-color:var(--teal-bright); color:var(--teal-bright); }
+  .thumb-toggle.is-active{ border-color:var(--teal-bright); color:var(--teal-bright); }
 
   @keyframes thumb-pulse-ring{
     0%{ box-shadow:0 0 0 0 rgba(46,154,154,.55); }
@@ -163,7 +163,7 @@
     <div class="topbar-right">
       <div class="page-indicator" id="page-indicator"></div>
       <button class="thumb-toggle" id="thumb-toggle" aria-label="頁面縮圖" title="頁面縮圖">
-        <span class="icon">&#9638;</span><span class="label">頁面</span>
+        <span class="icon">&#9638;</span><span class="label">PAGE</span>
       </button>
     </div>
   </div>
