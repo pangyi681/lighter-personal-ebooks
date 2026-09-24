@@ -47,10 +47,6 @@
   .rule{
     width:64px; height:1px; background:var(--line-strong); margin:22px auto;
   }
-  .lede{
-    font-family:var(--serif-tc); font-size:15px; color:var(--fg-dim);
-    max-width:440px; margin:0 auto; line-height:1.9;
-  }
   .shelf{
     width:100%; max-width:1100px; padding:40px 24px 100px;
     display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
@@ -84,6 +80,10 @@
     font-family:var(--sans); font-size:11px; color:var(--fg-dim);
     margin-top:4px; opacity:.7;
   }
+  .card-desc{
+    font-family:var(--serif-tc); font-size:13px; color:var(--fg-dim);
+    line-height:1.85; margin:16px auto 0; max-width:300px;
+  }
   footer{
     padding:30px 24px 50px; text-align:center;
     font-family:var(--sans); font-size:11px; color:var(--slate);
@@ -95,9 +95,8 @@
   <header>
     <div class="mono">LT</div>
     <div class="kicker">Shuttered Light</div>
-    <h1>Digital Editions</h1>
+    <h1>Photo Album</h1>
     <div class="rule"></div>
-    <p class="lede">點開封面，像翻一本真的書一樣，一頁一頁走過這些影像。</p>
   </header>
 
   <main class="shelf">
@@ -109,6 +108,7 @@
         <div class="card-title">Shuttered Light</div>
         <div class="card-sub">Photography Album</div>
         <div class="card-count">58 Pages</div>
+        <p class="card-desc">快門按下的瞬間終將消失，但這本以拍攝時間排序的攝影日記，把街頭裡每一個平凡轉角的不平凡都截了下來——證明著某個場景、某個人，曾在某時某刻存在過。</p>
       </div>
     </a>
 
@@ -120,6 +120,7 @@
         <div class="card-title">Fragments of Light</div>
         <div class="card-sub">Photo Series</div>
         <div class="card-count">32 Pages</div>
+        <p class="card-desc">城市本身就是一格一格散落的碎片。這系列向香港攝影師何藩致敬，把他鏡頭裡的光影幾何揉進了我看城市的方式——在街角、巷弄間，拾起屬於這座城市的光之碎片。</p>
       </div>
     </a>
   </main>
