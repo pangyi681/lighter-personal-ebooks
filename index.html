@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shuttered Light — 作品集電子書</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Noto+Serif+TC:wght@400;500;700&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0E1F1F; --teal:#1B4B4B; --teal-bright:#2E9A9A;
+    --gold:#E0A96D; --paper:#F4F1EA; --slate:#6B7A78;
+    --line:rgba(244,241,234,.14); --line-strong:rgba(244,241,234,.28);
+    --fg:#E7ECEA; --fg-dim:#AEBAB7;
+    --serif-en:"Playfair Display",Georgia,"Noto Serif TC",serif;
+    --serif-tc:"Noto Serif TC",Georgia,serif;
+    --sans:"Noto Sans TC","Helvetica Neue",-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:radial-gradient(120% 100% at 50% 0%, #0F2323 0%, #081414 60%, #060F0F 100%);
+    color:var(--fg); font-family:var(--sans); min-height:100vh;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  header{
+    width:100%; max-width:1100px; padding:56px 24px 24px;
+    text-align:center; position:relative;
+  }
+  .mono{
+    position:absolute; top:24px; right:24px;
+    font-family:var(--serif-en); font-weight:700; font-size:22px;
+    color:var(--teal-bright); letter-spacing:1px; opacity:.85;
+  }
+  .kicker{
+    font-family:var(--sans); font-weight:300; letter-spacing:.35em;
+    text-transform:uppercase; font-size:11px; color:var(--fg-dim);
+    margin-bottom:18px;
+  }
+  h1{
+    font-family:var(--serif-en); font-weight:600; font-size:clamp(32px,6vw,56px);
+    margin:0 0 10px; color:var(--fg); letter-spacing:.01em;
+  }
+  .rule{
+    width:64px; height:1px; background:var(--line-strong); margin:22px auto;
+  }
+  .lede{
+    font-family:var(--serif-tc); font-size:15px; color:var(--fg-dim);
+    max-width:440px; margin:0 auto; line-height:1.9;
+  }
+  .shelf{
+    width:100%; max-width:1100px; padding:40px 24px 100px;
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    gap:40px;
+  }
+  .book-card{
+    display:block; text-decoration:none; color:inherit;
+    position:relative; cursor:pointer;
+  }
+  .cover-frame{
+    position:relative; border:1px solid var(--line); padding:10px;
+    background:rgba(255,255,255,.02);
+    transition:border-color .35s ease, transform .35s ease;
+  }
+  .book-card:hover .cover-frame{ border-color:var(--teal-bright); transform:translateY(-4px); }
+  .cover-frame img{
+    display:block; width:100%; height:auto;
+    box-shadow:0 24px 60px -20px rgba(0,0,0,.7);
+  }
+  .card-meta{ margin-top:20px; text-align:center; }
+  .card-title{
+    font-family:var(--serif-en); font-weight:600; font-size:20px;
+    letter-spacing:.03em; color:var(--fg);
+  }
+  .card-sub{
+    font-family:var(--sans); font-weight:300; font-size:11px;
+    letter-spacing:.2em; text-transform:uppercase; color:var(--slate);
+    margin-top:6px;
+  }
+  .card-count{
+    font-family:var(--sans); font-size:11px; color:var(--fg-dim);
+    margin-top:4px; opacity:.7;
+  }
+  footer{
+    padding:30px 24px 50px; text-align:center;
+    font-family:var(--sans); font-size:11px; color:var(--slate);
+    letter-spacing:.1em;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="mono">LT</div>
+    <div class="kicker">Shuttered Light</div>
+    <h1>作品集電子書</h1>
+    <div class="rule"></div>
+    <p class="lede">點開封面，像翻一本真的書一樣，一頁一頁走過這些影像。</p>
+  </header>
+
+  <main class="shelf">
+    <a class="book-card" href="book.html?id=xiaode-photobook">
+      <div class="cover-frame">
+        <img src="images/xiaode-photobook/page-01.jpg" alt="Shuttered Light 攝影作品集封面" loading="lazy">
+      </div>
+      <div class="card-meta">
+        <div class="card-title">Shuttered Light</div>
+        <div class="card-sub">Photography Album</div>
+        <div class="card-count">58 Pages</div>
+      </div>
+    </a>
+
+    <a class="book-card" href="book.html?id=fragments-of-light">
+      <div class="cover-frame">
+        <img src="images/fragments-of-light/page-01.jpg" alt="Fragments of Light 封面" loading="lazy">
+      </div>
+      <div class="card-meta">
+        <div class="card-title">Fragments of Light</div>
+        <div class="card-sub">Photo Series</div>
+        <div class="card-count">32 Pages</div>
+      </div>
+    </a>
+  </main>
+
+  <footer>© Lighter · Shuttered Light</footer>
+</body>
+</html>

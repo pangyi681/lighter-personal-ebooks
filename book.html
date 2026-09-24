@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>作品集電子書</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+<style>
+  :root{
+    --ink:#0E1F1F; --teal:#1B4B4B; --teal-bright:#2E9A9A;
+    --gold:#E0A96D; --paper:#F4F1EA; --slate:#6B7A78;
+    --line:rgba(244,241,234,.14); --line-strong:rgba(244,241,234,.28);
+    --fg:#E7ECEA; --fg-dim:#AEBAB7;
+    --serif-en:"Playfair Display",Georgia,serif;
+    --sans:"Noto Sans TC","Helvetica Neue",-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden}
+  body{
+    font-family:var(--sans);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    transition:background .4s ease;
+  }
+  body.theme-light{ background:radial-gradient(120% 100% at 50% 0%, #F7F4EE 0%, #EDE8DE 100%); color:var(--ink); }
+  body.theme-dark{ background:#050505; color:var(--fg); }
+
+  .topbar{
+    position:fixed; top:0; left:0; right:0; z-index:20;
+    display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+    gap:12px; padding:18px 24px; font-family:var(--sans);
+  }
+  .back-link{
+    text-decoration:none; font-size:12px; letter-spacing:.15em; text-transform:uppercase;
+    display:flex; align-items:center; gap:8px; opacity:.8; transition:opacity .2s;
+    justify-self:start; white-space:nowrap;
+  }
+  .back-link:hover{ opacity:1; }
+  .theme-light .back-link{ color:var(--ink); }
+  .theme-dark .back-link{ color:var(--fg); }
+
+  .book-title{
+    font-family:var(--serif-en); font-weight:600; font-size:16px; letter-spacing:.02em;
+    text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    justify-self:center; max-width:100%;
+  }
+
+  .page-indicator{
+    font-size:11px; letter-spacing:.15em; opacity:.6; font-variant-numeric:tabular-nums;
+    justify-self:end; white-space:nowrap;
+  }
+
+  #book-stage{
+    display:flex; align-items:center; justify-content:center;
+    width:100vw; height:100vh;
+  }
+  #book{ margin:auto; }
+  #book img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+  .nav-btn{
+    position:fixed; top:50%; transform:translateY(-50%);
+    width:48px; height:48px; border-radius:50%; border:1px solid var(--line-strong);
+    background:rgba(0,0,0,.15); backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    z-index:15; transition:background .2s, opacity .2s; opacity:.7;
+    font-family:var(--serif-en); font-size:20px; user-select:none;
+  }
+  .theme-light .nav-btn{ color:var(--ink); border-color:rgba(14,31,31,.2); background:rgba(255,255,255,.4); }
+  .theme-dark .nav-btn{ color:var(--fg); }
+  .nav-btn:hover{ opacity:1; }
+  #prev-btn{ left:20px; } #next-btn{ right:20px; }
+
+  .loading{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:var(--serif-en); font-size:13px; letter-spacing:.2em; text-transform:uppercase;
+    opacity:.6; z-index:30;
+  }
+  .hidden{ display:none !important; }
+
+  @media (max-width:640px){
+    .topbar{ padding:14px 12px; gap:8px; }
+    .back-link span.back-text{ display:none; }
+    .book-title{ font-size:13px; }
+    .nav-btn{ width:38px; height:38px; font-size:16px; }
+    #prev-btn{ left:8px; } #next-btn{ right:8px; }
+  }
+</style>
+</head>
+<body>
+  <div class="loading" id="loading">Loading —</div>
+
+  <div class="topbar">
+    <a class="back-link" href="index.html">&larr;<span class="back-text">&nbsp; Back</span></a>
+    <div class="book-title" id="book-title"></div>
+    <div class="page-indicator" id="page-indicator"></div>
+  </div>
+
+  <div id="book-stage">
+    <div id="book"></div>
+  </div>
+
+  <div class="nav-btn" id="prev-btn">&#8249;</div>
+  <div class="nav-btn" id="next-btn">&#8250;</div>
+
+<script>
+  const BOOKS = {
+    "xiaode-photobook": {
+      title: "Shuttered Light",
+      dir: "images/xiaode-photobook",
+      pages: 58,
+      ratio: 1488/2020,
+      theme: "light",
+      spread: true
+    },
+    "fragments-of-light": {
+      title: "Fragments of Light",
+      dir: "images/fragments-of-light",
+      pages: 32,
+      ratio: 1489/1049,
+      theme: "dark",
+      spread: false
+    }
+  };
+
+  const params = new URLSearchParams(location.search);
+  const id = params.get("id");
+  const cfg = BOOKS[id];
+
+  if (!cfg) {
+    document.body.innerHTML = '<p style="font-family:sans-serif;color:#ccc;text-align:center;margin-top:40vh">找不到這本電子書。<a href="index.html" style="color:#2E9A9A">回書架</a></p>';
+  } else {
+    document.body.classList.add(cfg.theme === "dark" ? "theme-dark" : "theme-light");
+    document.getElementById("book-title").textContent = cfg.title;
+
+    const images = [];
+    for (let i = 1; i <= cfg.pages; i++) {
+      images.push(`${cfg.dir}/page-${String(i).padStart(2,"0")}.jpg`);
+    }
+
+    // Below this width, always show one page at a time — a two-page
+    // spread of portrait pages gets too small to read on a phone.
+    const SPREAD_BREAKPOINT = 700;
+    const effectiveSpread = cfg.spread && window.innerWidth >= SPREAD_BREAKPOINT;
+
+    function computeSize() {
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const availW = vw * (window.innerWidth < 640 ? 0.92 : 0.82);
+      const availH = vh * 0.82;
+      let pageH, pageW;
+      if (effectiveSpread) {
+        // double-page spread: total width = 2 * pageW
+        pageH = Math.min(availH, availW / (cfg.ratio * 2));
+        pageW = pageH * cfg.ratio;
+      } else {
+        pageH = Math.min(availH, availW / cfg.ratio);
+        pageW = pageH * cfg.ratio;
+      }
+      return { width: Math.round(pageW), height: Math.round(pageH) };
+    }
+
+    const { width, height } = computeSize();
+
+    const pageFlip = new St.PageFlip(document.getElementById("book"), {
+      width, height,
+      size: "fixed",
+      minWidth: 200, maxWidth: 1400,
+      minHeight: 200, maxHeight: 1800,
+      showCover: effectiveSpread,
+      usePortrait: !effectiveSpread,
+      maxShadowOpacity: 0.5,
+      mobileScrollSupport: false,
+      flippingTime: 700,
+      useMouseEvents: true
+    });
+
+    pageFlip.loadFromImages(images);
+
+    const total = cfg.pages;
+    function updateIndicator() {
+      const cur = pageFlip.getCurrentPageIndex() + 1;
+      document.getElementById("page-indicator").textContent = `${cur} / ${total}`;
+    }
+    pageFlip.on("flip", updateIndicator);
+    pageFlip.on("init", () => {
+      updateIndicator();
+      document.getElementById("loading").classList.add("hidden");
+    });
+
+    document.getElementById("prev-btn").addEventListener("click", () => pageFlip.flipPrev());
+    document.getElementById("next-btn").addEventListener("click", () => pageFlip.flipNext());
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") pageFlip.flipPrev();
+      if (e.key === "ArrowRight") pageFlip.flipNext();
+      if (e.key === "Escape") location.href = "index.html";
+    });
+
+    let resizeTimer;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        const crossedBreakpoint = cfg.spread &&
+          (window.innerWidth >= SPREAD_BREAKPOINT) !== effectiveSpread;
+        if (crossedBreakpoint) {
+          // spread vs single-page mode can't be swapped live — reload to reinit
+          location.reload();
+          return;
+        }
+        const { width, height } = computeSize();
+        pageFlip.update({ width, height });
+      }, 200);
+    });
+
+    // fallback: hide loading after 4s regardless
+    setTimeout(() => document.getElementById("loading").classList.add("hidden"), 4000);
+  }
+</script>
+</body>
+</html>
