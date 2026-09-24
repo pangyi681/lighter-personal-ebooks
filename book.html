@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>作品集電子書</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='68' font-family='Georgia,serif' font-weight='700' font-size='50' fill='%23FFFFFF' text-anchor='middle'>LT</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -71,7 +72,7 @@
   .thumb-toggle.pulse{ animation:thumb-pulse-ring 1.5s ease-out 3; }
 
   #thumb-backdrop{
-    position:fixed; inset:0; background:rgba(14,31,31,.18); z-index:24;
+    position:fixed; inset:0; background:rgba(0,0,0,.08); z-index:24;
     opacity:0; pointer-events:none; transition:opacity .3s ease;
   }
   #thumb-backdrop.is-open{ opacity:1; pointer-events:auto; }
@@ -196,7 +197,7 @@
   // (cover) and very last (back cover), which stand alone. `paired: true`
   // turns that into "units": [1], [2,3], [4,5], ..., [pages].
   const BOOKS = {
-    "xiaode-photobook": { title: "Shuttered Light", dir: "images/xiaode-photobook", pages: 58 },
+    "xiaode-photobook": { title: "Shuttered Light", dir: "images/xiaode-photobook", pages: 105 },
     "fragments-of-light": { title: "Fragments of Light", dir: "images/fragments-of-light", pages: 32, paired: true, ratio: 1489 / 1049 },
     "xiaode-report": { title: "截光・攝影 — 專題報告", dir: "images/xiaode-report", pages: 77 }
   };
