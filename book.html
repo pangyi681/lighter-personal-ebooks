@@ -10,7 +10,8 @@
   :root{
     --ink:#0E1F1F; --teal:#1B4B4B; --teal-bright:#2E9A9A;
     --gold:#E0A96D; --paper:#F4F1EA; --slate:#6B7A78;
-    --line:rgba(14,31,31,.12); --line-strong:rgba(14,31,31,.24);
+    --line:rgba(244,241,234,.14); --line-strong:rgba(244,241,234,.28);
+    --fg:#E7ECEA; --fg-dim:#AEBAB7;
     --serif-en:"Playfair Display",Georgia,serif;
     --sans:"Noto Sans TC","Helvetica Neue",-apple-system,sans-serif;
   }
@@ -18,7 +19,7 @@
   html,body{margin:0;padding:0;height:100%;overflow:hidden}
   body{
     font-family:var(--sans); color:var(--ink);
-    background:#FFFFFF;
+    background:#F5F1E9;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     opacity:0; transition:opacity .5s ease;
   }
@@ -54,16 +55,25 @@
   }
   #page-img{
     max-width:100%; max-height:100%; width:auto; height:auto;
-    display:block; background:#FBFAF6;
+    display:block;
+    box-shadow:0 24px 60px -24px rgba(14,31,31,.35);
     opacity:0; transition:opacity .45s ease;
   }
   #page-img.is-visible{ opacity:1; }
+
+  #page-pair{
+    display:none; align-items:stretch; justify-content:center;
+    box-shadow:0 24px 60px -24px rgba(14,31,31,.35);
+    opacity:0; transition:opacity .45s ease;
+  }
+  #page-pair.is-visible{ opacity:1; }
+  #page-pair img{ display:block; height:100%; width:100%; object-fit:cover; }
+  #page-pair .pair-divider{ width:1px; background:var(--line-strong); flex:none; }
 
   .nav-btn{
     position:fixed; top:50%; transform:translateY(-50%);
     width:48px; height:48px; border-radius:50%; border:1px solid var(--line-strong);
     background:rgba(14,31,31,.05); color:var(--ink);
-    box-shadow:0 2px 14px rgba(14,31,31,.08);
     display:flex; align-items:center; justify-content:center; cursor:pointer;
     z-index:15; transition:background .2s, opacity .2s; opacity:.6;
     font-family:var(--serif-en); font-size:20px; user-select:none;
@@ -100,6 +110,11 @@
 
   <div id="viewer">
     <img id="page-img" alt="">
+    <div id="page-pair">
+      <img class="pair-img" data-slot="0" alt="">
+      <div class="pair-divider"></div>
+      <img class="pair-img" data-slot="1" alt="">
+    </div>
   </div>
 
   <div class="nav-btn" id="prev-btn">&#8249;</div>
@@ -108,14 +123,18 @@
 <script>
   // Shuttered Light's PDF has page 1 and the last page as single portrait
   // covers, and every page in between pre-composed as a full two-page
-  // landscape spread. Rather than forcing everything into one fixed page
-  // size (which either squashes the spreads or stretches the covers),
-  // each image is shown at its own natural shape — the <img> just fits
-  // within the available space, so covers read as a single page and
-  // spreads read full-width automatically.
+  // landscape spread — so it's shown one image at a time, each at its own
+  // natural shape (covers read as a single page, spreads read full-width,
+  // no JS sizing math needed).
+  //
+  // Fragments of Light is laid out the normal print-book way instead:
+  // every page is physically the same size, and the interior pages are
+  // meant to be viewed two at a time as a spread, except the very first
+  // (cover) and very last (back cover), which stand alone. `paired: true`
+  // turns that into "units": [1], [2,3], [4,5], ..., [pages].
   const BOOKS = {
     "xiaode-photobook": { title: "Shuttered Light", dir: "images/xiaode-photobook", pages: 58 },
-    "fragments-of-light": { title: "Fragments of Light", dir: "images/fragments-of-light", pages: 32 }
+    "fragments-of-light": { title: "Fragments of Light", dir: "images/fragments-of-light", pages: 32, paired: true, ratio: 1489 / 1049 }
   };
 
   const params = new URLSearchParams(location.search);
@@ -133,6 +152,16 @@
     goTo("index.html");
   });
 
+  function buildUnits(cfg) {
+    if (!cfg.paired) {
+      return Array.from({ length: cfg.pages }, (_, i) => [i + 1]);
+    }
+    const units = [[1]];
+    for (let p = 2; p < cfg.pages; p += 2) units.push([p, p + 1]);
+    units.push([cfg.pages]);
+    return units;
+  }
+
   if (!cfg) {
     document.body.innerHTML = '<p style="font-family:sans-serif;color:#0E1F1F;text-align:center;margin-top:40vh">找不到這本電子書。<a href="index.html" style="color:#2E9A9A">回書架</a></p>';
     requestAnimationFrame(() => document.body.classList.add("is-ready"));
@@ -140,66 +169,109 @@
     document.getElementById("book-title").textContent = cfg.title;
 
     const total = cfg.pages;
-    let currentIndex = 0;
-    const img = document.getElementById("page-img");
+    const units = buildUnits(cfg);
+    let currentUnit = 0;
+
+    const singleImg = document.getElementById("page-img");
+    const pairEl = document.getElementById("page-pair");
+    const pairImgs = pairEl.querySelectorAll(".pair-img");
     const prevBtn = document.getElementById("prev-btn");
     const nextBtn = document.getElementById("next-btn");
 
-    function pageSrc(i) {
-      return `${cfg.dir}/page-${String(i + 1).padStart(2, "0")}.jpg`;
+    function pageSrc(n) {
+      return `${cfg.dir}/page-${String(n).padStart(2, "0")}.jpg`;
     }
-    function preload(i) {
-      if (i < 0 || i >= total) return;
+    function preload(n) {
+      if (n < 1 || n > total) return;
       const im = new Image();
-      im.src = pageSrc(i);
+      im.src = pageSrc(n);
     }
     function updateChrome() {
-      document.getElementById("page-indicator").textContent = `${currentIndex + 1} / ${total}`;
-      prevBtn.classList.toggle("is-disabled", currentIndex === 0);
-      nextBtn.classList.toggle("is-disabled", currentIndex === total - 1);
+      const pages = units[currentUnit];
+      const label = pages.length === 2 ? `${pages[0]}–${pages[1]}` : `${pages[0]}`;
+      document.getElementById("page-indicator").textContent = `${label} / ${total}`;
+      prevBtn.classList.toggle("is-disabled", currentUnit === 0);
+      nextBtn.classList.toggle("is-disabled", currentUnit === units.length - 1);
     }
 
-    function showPage(newIndex, immediate) {
-      newIndex = Math.max(0, Math.min(total - 1, newIndex));
-      if (!immediate && newIndex === currentIndex) return;
-      currentIndex = newIndex;
+    // Sizes the two-page-pair box in real pixels so both images share one
+    // exact height (plain CSS can't fit a fixed-aspect *pair* the way
+    // object-fit does for a single image).
+    function sizePair() {
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const availW = vw * (vw < 640 ? 0.94 : 0.82);
+      const availH = vh * 0.82;
+      const unitRatio = cfg.ratio * 2;
+      const h = Math.min(availH, availW / unitRatio);
+      const w = h * cfg.ratio;
+      pairEl.style.height = Math.round(h) + "px";
+      pairImgs.forEach((im) => { im.style.width = Math.round(w) + "px"; });
+    }
+
+    function reveal() {
+      document.getElementById("loading").classList.add("hidden");
+      requestAnimationFrame(() => document.body.classList.add("is-ready"));
+    }
+
+    function showUnit(newUnit, immediate) {
+      newUnit = Math.max(0, Math.min(units.length - 1, newUnit));
+      if (!immediate && newUnit === currentUnit) return;
+      currentUnit = newUnit;
       updateChrome();
-      preload(currentIndex + 1);
-      preload(currentIndex - 1);
+      const pages = units[currentUnit];
+      preload(pages[0] - 1);
+      preload((pages[1] || pages[0]) + 1);
 
       const apply = () => {
-        img.onload = () => {
-          img.classList.add("is-visible");
-          document.getElementById("loading").classList.add("hidden");
-          requestAnimationFrame(() => document.body.classList.add("is-ready"));
-        };
-        img.src = pageSrc(currentIndex);
+        if (pages.length === 2) {
+          singleImg.classList.remove("is-visible");
+          singleImg.style.display = "none";
+          sizePair();
+          let loaded = 0;
+          const onEach = () => { if (++loaded === 2) { pairEl.classList.add("is-visible"); reveal(); } };
+          pairImgs[0].onload = onEach;
+          pairImgs[1].onload = onEach;
+          pairEl.style.display = "flex";
+          pairImgs[0].src = pageSrc(pages[0]);
+          pairImgs[1].src = pageSrc(pages[1]);
+        } else {
+          pairEl.classList.remove("is-visible");
+          pairEl.style.display = "none";
+          singleImg.style.display = "block";
+          singleImg.onload = () => { singleImg.classList.add("is-visible"); reveal(); };
+          singleImg.src = pageSrc(pages[0]);
+        }
       };
 
       if (immediate) {
         apply();
       } else {
-        img.classList.remove("is-visible");
+        singleImg.classList.remove("is-visible");
+        pairEl.classList.remove("is-visible");
         setTimeout(apply, 220);
       }
     }
 
-    showPage(0, true);
+    showUnit(0, true);
 
-    prevBtn.addEventListener("click", () => showPage(currentIndex - 1));
-    nextBtn.addEventListener("click", () => showPage(currentIndex + 1));
+    prevBtn.addEventListener("click", () => showUnit(currentUnit - 1));
+    nextBtn.addEventListener("click", () => showUnit(currentUnit + 1));
 
     window.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft") showPage(currentIndex - 1);
-      if (e.key === "ArrowRight") showPage(currentIndex + 1);
+      if (e.key === "ArrowLeft") showUnit(currentUnit - 1);
+      if (e.key === "ArrowRight") showUnit(currentUnit + 1);
       if (e.key === "Escape") goTo("index.html");
     });
 
+    let resizeTimer;
+    window.addEventListener("resize", () => {
+      if (units[currentUnit].length !== 2) return;
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(sizePair, 150);
+    });
+
     // fallback: reveal the page anyway after 4s even if the image is slow
-    setTimeout(() => {
-      document.getElementById("loading").classList.add("hidden");
-      document.body.classList.add("is-ready");
-    }, 4000);
+    setTimeout(reveal, 4000);
   }
 </script>
 </body>
