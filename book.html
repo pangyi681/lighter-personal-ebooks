@@ -143,9 +143,9 @@
   #lightbox.zoomed{ cursor:grab; }
   #lb-wrap{
     display:flex; align-items:center; justify-content:center;
-    max-width:96vw; max-height:94vh; transform-origin:center center;
+    max-width:96vw; max-height:84vh; transform-origin:center center;
   }
-  #lb-wrap img{ display:block; max-width:96vw; max-height:94vh; width:auto; height:auto; }
+  #lb-wrap img{ display:block; max-width:96vw; max-height:84vh; width:auto; height:auto; }
   #lb-wrap img:only-child{ max-width:96vw; }
   #lb-wrap img + img{ margin-left:1px; max-width:48vw; }
   #lb-wrap:has(img + img) img:first-child{ max-width:48vw; }
@@ -155,8 +155,10 @@
     color:#fff; font-size:16px; cursor:pointer;
   }
   #lb-hint{
-    position:absolute; bottom:14px; left:0; right:0; text-align:center; font-size:11px;
-    letter-spacing:.12em; color:rgba(255,255,255,.45); pointer-events:none;
+    position:absolute; bottom:18px; left:50%; transform:translateX(-50%); z-index:2;
+    width:max-content; max-width:92vw; text-align:center; font-size:11px; padding:7px 14px;
+    letter-spacing:.1em; color:rgba(255,255,255,.85); background:rgba(0,0,0,.55);
+    border-radius:999px; pointer-events:none;
   }
   #lightbox.zoomed #lb-hint{ opacity:0; }
   #prev-btn{ left:20px; } #next-btn{ right:20px; }
@@ -437,7 +439,8 @@
     document.getElementById("lb-close").addEventListener("click", lbClose);
     lb.addEventListener("wheel", (e) => {
       e.preventDefault();
-      lbZoomAt(e.clientX, e.clientY, lbS * (e.deltaY < 0 ? 1.18 : 1 / 1.18));
+      const d = Math.max(-60, Math.min(60, e.deltaY));
+      lbZoomAt(e.clientX, e.clientY, lbS * Math.exp(-d * 0.0012));
     }, { passive: false });
 
     let drag = null;
