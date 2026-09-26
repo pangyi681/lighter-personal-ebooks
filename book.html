@@ -213,7 +213,7 @@
   <div id="lightbox" role="dialog" aria-modal="true" aria-label="放大檢視">
     <button id="lb-close" aria-label="關閉">&#10005;</button>
     <div id="lb-wrap"></div>
-    <div id="lb-hint">點一下放大 · 拖曳移動 · 滾輪縮放 · 點空白處關閉</div>
+    <div id="lb-hint">雙指縮放 · 點一下放大 · 拖曳移動 · 點空白處關閉</div>
   </div>
 
   <div id="thumb-backdrop"></div>
@@ -437,33 +437,78 @@
 
     [singleImg, ...pairImgs].forEach((im) => { im.style.cursor = "zoom-in"; im.addEventListener("click", lbOpen); });
     document.getElementById("lb-close").addEventListener("click", lbClose);
+    // desktop trackpad pinch (and ctrl+wheel) arrives as wheel + ctrlKey; plain
+    // two-finger scrolling pans the zoomed page instead of zooming
     lb.addEventListener("wheel", (e) => {
       e.preventDefault();
-      const d = Math.max(-60, Math.min(60, e.deltaY));
-      lbZoomAt(e.clientX, e.clientY, lbS * Math.exp(-d * 0.0012));
+      if (e.ctrlKey) {
+        const d = Math.max(-40, Math.min(40, e.deltaY));
+        lbZoomAt(e.clientX, e.clientY, lbS * Math.exp(-d * 0.01));
+      } else if (lbS > 1) {
+        lbX -= e.deltaX; lbY -= e.deltaY; lbApply();
+      }
     }, { passive: false });
 
-    let drag = null;
+    // Safari desktop pinch
+    let gBase = 1;
+    lb.addEventListener("gesturestart", (e) => { e.preventDefault(); gBase = lbS; });
+    lb.addEventListener("gesturechange", (e) => {
+      e.preventDefault();
+      lbZoomAt(e.clientX, e.clientY, gBase * e.scale);
+    });
+    lb.addEventListener("gestureend", (e) => e.preventDefault());
+
+    // pointer handling: 1 finger/mouse = drag or tap, 2 fingers = pinch + pan
+    const ptrs = new Map();
+    let drag = null, pinch = null;
+    const two = () => { const [a, b] = [...ptrs.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; };
+
     lb.addEventListener("pointerdown", (e) => {
       if (e.target.closest("#lb-close")) return;
-      drag = { x: e.clientX, y: e.clientY, ox: lbX, oy: lbY, onImg: e.target.tagName === "IMG" };
-      lbMoved = false;
-      lb.setPointerCapture(e.pointerId);
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      try { lb.setPointerCapture(e.pointerId); } catch (_) {}
+      if (ptrs.size === 2) {
+        const t = two();
+        pinch = { d: t.d, s: lbS, mx: t.mx, my: t.my };
+        drag = null; lbMoved = true;
+      } else if (ptrs.size === 1) {
+        drag = { x: e.clientX, y: e.clientY, ox: lbX, oy: lbY, onImg: e.target.tagName === "IMG" };
+        lbMoved = false;
+      }
     });
     lb.addEventListener("pointermove", (e) => {
-      if (!drag) return;
-      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-      if (Math.abs(dx) + Math.abs(dy) > 5) lbMoved = true;
-      if (lbS > 1 && lbMoved) { lbX = drag.ox + dx; lbY = drag.oy + dy; lbApply(); }
+      if (!ptrs.has(e.pointerId)) return;
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && ptrs.size >= 2) {
+        const t = two();
+        lbZoomAt(t.mx, t.my, pinch.s * (t.d / pinch.d));
+        lbX += t.mx - pinch.mx; lbY += t.my - pinch.my;
+        pinch.mx = t.mx; pinch.my = t.my;
+        if (lbS === 1) { lbX = 0; lbY = 0; }
+        lbApply();
+      } else if (drag) {
+        const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+        if (Math.abs(dx) + Math.abs(dy) > 5) lbMoved = true;
+        if (lbS > 1 && lbMoved) { lbX = drag.ox + dx; lbY = drag.oy + dy; lbApply(); }
+      }
     });
-    lb.addEventListener("pointerup", (e) => {
+    const ptrEnd = (e) => {
+      if (!ptrs.has(e.pointerId)) return;
+      ptrs.delete(e.pointerId);
+      if (pinch) {
+        if (ptrs.size < 2) pinch = null;
+        if (ptrs.size === 1) { const r = [...ptrs.values()][0]; drag = { x: r.x, y: r.y, ox: lbX, oy: lbY, onImg: true }; }
+        return;
+      }
       const wasDrag = lbMoved, onImg = drag && drag.onImg;
       drag = null;
-      if (wasDrag || e.target.closest("#lb-close")) return;
+      if (e.type === "pointercancel" || wasDrag) return;
       if (lbS > 1) lbReset();
       else if (onImg) lbZoomAt(e.clientX, e.clientY, 2.5);
       else lbClose();
-    });
+    };
+    lb.addEventListener("pointerup", ptrEnd);
+    lb.addEventListener("pointercancel", ptrEnd);
 
     window.addEventListener("keydown", (e) => {
       const open = lb.classList.contains("open");
