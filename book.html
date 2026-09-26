@@ -132,6 +132,33 @@
   }
   .nav-btn:hover{ background:rgba(14,31,31,.1); opacity:1; }
   .nav-btn.is-disabled{ opacity:.2; pointer-events:none; }
+
+  #lightbox{
+    position:fixed; inset:0; z-index:60; background:rgba(8,12,12,.94);
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+    opacity:0; visibility:hidden; transition:opacity .3s ease, visibility .3s ease;
+    touch-action:none; cursor:zoom-in; user-select:none;
+  }
+  #lightbox.open{ opacity:1; visibility:visible; }
+  #lightbox.zoomed{ cursor:grab; }
+  #lb-wrap{
+    display:flex; align-items:center; justify-content:center;
+    max-width:96vw; max-height:94vh; transform-origin:center center;
+  }
+  #lb-wrap img{ display:block; max-width:96vw; max-height:94vh; width:auto; height:auto; }
+  #lb-wrap img:only-child{ max-width:96vw; }
+  #lb-wrap img + img{ margin-left:1px; max-width:48vw; }
+  #lb-wrap:has(img + img) img:first-child{ max-width:48vw; }
+  #lb-close{
+    position:absolute; top:16px; right:18px; z-index:2; width:40px; height:40px;
+    border-radius:50%; border:1px solid rgba(255,255,255,.3); background:rgba(255,255,255,.06);
+    color:#fff; font-size:16px; cursor:pointer;
+  }
+  #lb-hint{
+    position:absolute; bottom:14px; left:0; right:0; text-align:center; font-size:11px;
+    letter-spacing:.12em; color:rgba(255,255,255,.45); pointer-events:none;
+  }
+  #lightbox.zoomed #lb-hint{ opacity:0; }
   #prev-btn{ left:20px; } #next-btn{ right:20px; }
 
   .loading{
@@ -180,6 +207,12 @@
 
   <div class="nav-btn" id="prev-btn">&#8249;</div>
   <div class="nav-btn" id="next-btn">&#8250;</div>
+
+  <div id="lightbox" role="dialog" aria-modal="true" aria-label="放大檢視">
+    <button id="lb-close" aria-label="關閉">&#10005;</button>
+    <div id="lb-wrap"></div>
+    <div id="lb-hint">點一下放大 · 拖曳移動 · 滾輪縮放 · 點空白處關閉</div>
+  </div>
 
   <div id="thumb-backdrop"></div>
   <aside id="thumb-panel"></aside>
@@ -368,10 +401,72 @@
     prevBtn.addEventListener("click", () => showUnit(currentUnit - 1));
     nextBtn.addEventListener("click", () => showUnit(currentUnit + 1));
 
+    // ---- lightbox: click a page to view it full-screen at native resolution ----
+    const lb = document.getElementById("lightbox");
+    const lbWrap = document.getElementById("lb-wrap");
+    let lbS = 1, lbX = 0, lbY = 0, lbMoved = false;
+
+    function lbApply() {
+      lbWrap.style.transform = `translate(${lbX}px,${lbY}px) scale(${lbS})`;
+      lb.classList.toggle("zoomed", lbS > 1);
+    }
+    function lbReset() { lbS = 1; lbX = 0; lbY = 0; lbApply(); }
+    function lbRender() {
+      lbWrap.innerHTML = units[currentUnit]
+        .map((p) => `<img src="${pageSrc(p)}" draggable="false" alt="">`)
+        .join("");
+      lbReset();
+    }
+    function lbOpen() { lbRender(); lb.classList.add("open"); }
+    function lbClose() { lb.classList.remove("open"); }
+    function lbZoomAt(px, py, next) {
+      const r = lb.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      next = Math.max(1, Math.min(6, next));
+      if (next === 1) { lbS = 1; lbX = 0; lbY = 0; }
+      else {
+        const k = next / lbS;
+        lbX = (px - cx) - k * (px - cx - lbX);
+        lbY = (py - cy) - k * (py - cy - lbY);
+        lbS = next;
+      }
+      lbApply();
+    }
+
+    [singleImg, ...pairImgs].forEach((im) => { im.style.cursor = "zoom-in"; im.addEventListener("click", lbOpen); });
+    document.getElementById("lb-close").addEventListener("click", lbClose);
+    lb.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      lbZoomAt(e.clientX, e.clientY, lbS * (e.deltaY < 0 ? 1.18 : 1 / 1.18));
+    }, { passive: false });
+
+    let drag = null;
+    lb.addEventListener("pointerdown", (e) => {
+      if (e.target.closest("#lb-close")) return;
+      drag = { x: e.clientX, y: e.clientY, ox: lbX, oy: lbY, onImg: e.target.tagName === "IMG" };
+      lbMoved = false;
+      lb.setPointerCapture(e.pointerId);
+    });
+    lb.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 5) lbMoved = true;
+      if (lbS > 1 && lbMoved) { lbX = drag.ox + dx; lbY = drag.oy + dy; lbApply(); }
+    });
+    lb.addEventListener("pointerup", (e) => {
+      const wasDrag = lbMoved, onImg = drag && drag.onImg;
+      drag = null;
+      if (wasDrag || e.target.closest("#lb-close")) return;
+      if (lbS > 1) lbReset();
+      else if (onImg) lbZoomAt(e.clientX, e.clientY, 2.5);
+      else lbClose();
+    });
+
     window.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft") showUnit(currentUnit - 1);
-      if (e.key === "ArrowRight") showUnit(currentUnit + 1);
-      if (e.key === "Escape") goTo("index.html");
+      const open = lb.classList.contains("open");
+      if (e.key === "ArrowLeft") { showUnit(currentUnit - 1); if (open) lbRender(); }
+      if (e.key === "ArrowRight") { showUnit(currentUnit + 1); if (open) lbRender(); }
+      if (e.key === "Escape") { if (open) lbClose(); else goTo("index.html"); }
     });
 
     let resizeTimer;
