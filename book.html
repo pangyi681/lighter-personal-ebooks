@@ -109,16 +109,16 @@
     max-width:100%; max-height:100%; width:auto; height:auto;
     display:block;
     box-shadow:0 24px 60px -24px rgba(14,31,31,.35);
-    opacity:0; transition:opacity .45s ease;
+    opacity:0; transition:opacity .18s ease;
   }
-  #page-img.is-visible{ opacity:1; }
+  #page-img.is-visible{ opacity:1; transition:opacity .45s ease; }
 
   #page-pair{
     display:none; align-items:stretch; justify-content:center;
     box-shadow:0 24px 60px -24px rgba(14,31,31,.35);
-    opacity:0; transition:opacity .45s ease;
+    opacity:0; transition:opacity .18s ease;
   }
-  #page-pair.is-visible{ opacity:1; }
+  #page-pair.is-visible{ opacity:1; transition:opacity .45s ease; }
   #page-pair img{ display:block; height:100%; width:100%; object-fit:cover; }
   #page-pair .pair-divider{ width:1px; background:var(--line-strong); flex:none; }
 
@@ -359,6 +359,7 @@
       requestAnimationFrame(() => document.body.classList.add("is-ready"));
     }
 
+    let turnId = 0;
     function showUnit(newUnit, immediate) {
       newUnit = Math.max(0, Math.min(units.length - 1, newUnit));
       if (!immediate && newUnit === currentUnit) return;
@@ -368,7 +369,9 @@
       preload(pages[0] - 1);
       preload((pages[1] || pages[0]) + 1);
 
+      const turn = ++turnId;
       const apply = () => {
+        if (turn !== turnId) return;
         if (pages.length === 2) {
           singleImg.classList.remove("is-visible");
           singleImg.style.display = "none";
